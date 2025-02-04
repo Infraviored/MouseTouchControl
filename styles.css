@@ -1,0 +1,166 @@
+:root {
+    --bg-color: #ffffff;
+    --text-color: #333333;
+    --button-color: #4CAF50;
+    --button-text: #ffffff;
+    --top-bar-height: 50px;
+    --bottom-bar-height: 60px;
+}
+
+.dark-theme {
+    --bg-color: #333333;
+    --text-color: #ffffff;
+    --button-color: #4CAF50;
+    --button-text: #ffffff;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+}
+
+#topBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--top-bar-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    background-color: var(--bg-color);
+    z-index: 10;
+    transform: none !important;
+}
+
+#touchpad {
+    flex-grow: 1;
+    margin-top: var(--top-bar-height);
+    margin-bottom: var(--bottom-bar-height);
+    touch-action: none;
+    overflow: auto;
+}
+
+#bottomBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bottom-bar-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: var(--bg-color);
+    z-index: 1000;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+}
+
+#textInputContainer {
+    display: flex;
+    flex-grow: 1;
+    margin: 0 10px;
+    min-width: 0;
+}
+
+#textField {
+    flex-grow: 1;
+    margin-right: 10px;
+    padding: 5px;
+    min-width: 0;
+}
+
+button, .icon-button {
+    background-color: var(--button-color);
+    color: var(--button-text);
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.icon-button {
+    background-color: transparent;
+    color: var(--text-color);
+}
+
+#settingsPanel {
+    position: fixed;
+    top: var(--top-bar-height);
+    right: 10px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--text-color);
+    padding: 15px;
+    border-radius: 5px;
+    display: none;
+    z-index: 20;
+}
+
+.setting {
+    margin-bottom: 10px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+#shortcutsPopup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg-color);
+    border: 1px solid var(--text-color);
+    padding: 20px;
+    border-radius: 5px;
+    display: none;
+    z-index: 30;
+}
+
+#shortcutsPopup button {
+    margin: 5px;
+}
+
+@media (max-width: 600px) {
+    #bottomBar {
+        height: auto;
+        flex-wrap: nowrap;
+    }
+    #textInputContainer {
+        flex-basis: 0;
+        flex-grow: 1;
+    }
+    #textField {
+        width: 100%;
+    }
+    button, .icon-button {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}
+
+@media (max-height: 400px) {
+    :root {
+        --bottom-bar-height: 50px;
+    }
+    #bottomBar {
+        height: var(--bottom-bar-height);
+    }
+}

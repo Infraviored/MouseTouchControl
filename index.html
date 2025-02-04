@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Remote touchpad control for your computer">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Touchpad">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Remote Touchpad">
+    <meta property="og:description" content="Remote touchpad control for your computer">
+    <meta property="og:image" content="touchpad.png">
+    
+    <title>Remote Touchpad</title>
+    <link rel="icon" type="image/png" href="touchpad.png">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="topBar">
+        <button id="reloadButton" class="icon-button">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <button id="shortcutsButton" class="icon-button">
+            <i class="fas fa-keyboard"></i>
+        </button>
+        <button id="lockButton" class="icon-button">
+            <i class="fas fa-lock-open"></i>
+        </button>
+        <button id="settingsButton" class="icon-button">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+    <div id="touchpad"></div>
+    <div id="bottomBar">
+        <button id="leftClick" class="icon-button"><i class="fas fa-mouse-pointer"></i></button>
+        <div id="textInputContainer">
+            <input type="text" id="textField" placeholder="Enter text">
+            <button id="sendButton" class="icon-button"><i class="fas fa-paper-plane"></i></button>
+            <button id="copyButton" class="icon-button"><i class="fas fa-copy"></i></button>
+        </div>
+        <button id="rightClick" class="icon-button"><i class="fas fa-hand-pointer"></i></button>
+    </div>
+    <div id="settingsPanel">
+        <div class="setting">
+            <label for="mouseSpeed">Mouse Speed:</label>
+            <input type="range" id="mouseSpeed" min="1" max="80" value="40">
+        </div>
+        <div class="setting">
+            <label for="moveThreshold">Move Threshold:</label>
+            <input type="range" id="moveThreshold" min="1" max="20" value="5">
+        </div>
+        <div class="setting">
+            <label for="rightClickDelay">Right Click Delay (ms):</label>
+            <input type="number" id="rightClickDelay" min="100" max="2000" value="500">
+        </div>
+        <div class="setting">
+            <label for="acceleration">Acceleration:</label>
+            <input type="range" id="acceleration" min="10" max="14" value="10" step="0.1">
+        </div>
+        <div class="setting">
+            <label for="darkMode">Dark Theme:</label>
+            <input type="checkbox" id="darkMode">
+        </div>
+        <div class="setting">
+            <label for="doubleClickDelay">Double-Click Drag Delay (ms):</label>
+            <input type="number" id="doubleClickDelay" min="100" max="1000" step="50" value="300">
+        </div>
+    </div>
+    <div id="shortcutsPopup">
+        <button id="closeShortcuts" class="icon-button"><i class="fas fa-times"></i></button>
+        <button id="ctrlC">Ctrl + C</button>
+        <button id="ctrlV">Ctrl + V</button>
+        <button id="ctrlA">Ctrl + A</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
