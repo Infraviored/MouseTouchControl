@@ -77,6 +77,10 @@ async function handleCommand(data) {
             }
             console.log('Shortcut:', data.keys.join(' + '));
             break;
+        case 'scroll':
+            robotjs.scrollMouse(data.dx, data.dy);
+            console.log('Scrolled by:', data.dx, data.dy);
+            break;
         default:
             console.log(`Unknown command: ${data.command}`);
     }
