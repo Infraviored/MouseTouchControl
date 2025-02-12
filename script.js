@@ -376,3 +376,31 @@ document.getElementById('scrollSpeed').addEventListener('input', (e) => {
     scrollSpeed = e.target.value / 100;
     saveSettings();
 });
+
+// Add new key handlers after the existing shortcut handlers
+document.getElementById('keyTab').addEventListener('click', () => 
+    sendCommand('shortcut', { keys: ['tab'] }));
+document.getElementById('keyUp').addEventListener('click', () => 
+    sendCommand('shortcut', { keys: ['up'] }));
+document.getElementById('keyDown').addEventListener('click', () => 
+    sendCommand('shortcut', { keys: ['down'] }));
+document.getElementById('keyLeft').addEventListener('click', () => 
+    sendCommand('shortcut', { keys: ['left'] }));
+document.getElementById('keyRight').addEventListener('click', () => 
+    sendCommand('shortcut', { keys: ['right'] }));
+
+// Add touch feedback for better mobile experience
+document.querySelectorAll('.key-button').forEach(button => {
+    button.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        button.style.transform = 'scale(0.95)';
+        button.style.background = 'var(--button-active-bg)';
+    });
+    
+    ['touchend', 'touchcancel'].forEach(event => {
+        button.addEventListener(event, () => {
+            button.style.transform = '';
+            button.style.background = '';
+        });
+    });
+});

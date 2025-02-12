@@ -84,10 +84,45 @@
         </div>
     </div>
     <div id="shortcutsPopup">
-        <button id="closeShortcuts" class="icon-button"><i class="fas fa-times"></i></button>
-        <button id="ctrlC">Ctrl + C</button>
-        <button id="ctrlV">Ctrl + V</button>
-        <button id="ctrlA">Ctrl + A</button>
+        <button id="closeShortcuts" class="icon-button">
+            <i class="fas fa-times"></i>
+        </button>
+        
+        <div class="shortcuts-section">
+            <h3>Shortcuts</h3>
+            <div class="shortcuts-grid">
+                <button id="ctrlC">Ctrl + C</button>
+                <button id="ctrlV">Ctrl + V</button>
+                <button id="ctrlA">Ctrl + A</button>
+            </div>
+        </div>
+        
+        <div class="shortcuts-section">
+            <h3>Keys</h3>
+            <div class="keys-grid">
+                <button id="keyTab" class="key-button">
+                    <i class="fas fa-arrow-right-to-line"></i>
+                    <span>Tab</span>
+                </button>
+                
+                <div class="arrow-keys">
+                    <button id="keyUp" class="key-button">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <div class="arrow-keys-bottom">
+                        <button id="keyLeft" class="key-button">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button id="keyDown" class="key-button">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <button id="keyRight" class="key-button">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
