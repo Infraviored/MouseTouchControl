@@ -26,7 +26,15 @@ const doubleClickDelay = 300; // milliseconds between clicks to count as double-
 
 // New globals for multi-touch support
 const activePointers = new Map();
-let twoFingerGesture = null; // holds info for two finger gestures
+let twoFingerGesture = null; // Will be initialized with:
+// {
+//     startCenter: {x, y},
+//     lastCenter: {x, y},
+//     horizontalAccum: 0,
+//     navigationTriggered: false,
+//     gestureType: null, // 'scroll', 'navigation', or null during detection
+//     initialPoints: [] // store points during detection phase
+// }
 let singlePointerGesture = null; // holds info for single pointer gestures
 
 // Add new global variables near the other settings variables
@@ -37,6 +45,10 @@ let scrollSpeed = 0.5; // new setting to halve the default scroll speed
 // Add new global for scroll accumulation
 let scrollAccumulator = 0;
 const SCROLL_THRESHOLD = 1; // Minimum amount before triggering a scroll
+
+// Add new constants for gesture detection
+const GESTURE_DETECTION_DISTANCE = 15; // pixels to determine gesture type
+const ANGLE_THRESHOLD = 45; // degrees to separate horizontal/vertical gestures
 
 // SETTINGS
 function loadSettings() {
@@ -159,16 +171,26 @@ function getCenterOfActivePointers() {
     return { x: sumX / count, y: sumY / count };
 }
 
+// Helper function to calculate angle between two points
+function calculateAngle(start, end) {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    // Returns angle in degrees from -180 to 180
+    return Math.atan2(dy, dx) * 180 / Math.PI;
+}
+
 function pointerdownHandler(e) {
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
     if (activePointers.size === 2) {
-        // Initialize two-finger gesture
+        const center = getCenterOfActivePointers();
         twoFingerGesture = {
-            startCenter: getCenterOfActivePointers(),
-            lastCenter: getCenterOfActivePointers(),
+            startCenter: center,
+            lastCenter: center,
             horizontalAccum: 0,
-            navigationTriggered: false
+            navigationTriggered: false,
+            gestureType: null,
+            initialPoints: [center]
         };
         // Cancel any pending single-finger timers
         if (singlePointerGesture && singlePointerGesture.rightClickTimer) {
@@ -211,40 +233,71 @@ function pointermoveHandler(e) {
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
     if (activePointers.size === 2) {
-        // Process two-finger gesture (scroll & navigation)
         const center = getCenterOfActivePointers();
         if (!twoFingerGesture) {
             twoFingerGesture = {
                 startCenter: center,
                 lastCenter: center,
                 horizontalAccum: 0,
-                navigationTriggered: false
+                navigationTriggered: false,
+                gestureType: null,
+                initialPoints: [center]
             };
         }
         const dx = center.x - twoFingerGesture.lastCenter.x;
         const dy = center.y - twoFingerGesture.lastCenter.y;
         twoFingerGesture.lastCenter = center;
         
-        // Accumulate scroll amount and trigger when threshold is reached
-        scrollAccumulator += dy * scrollSpeed;
-        if (Math.abs(scrollAccumulator) >= SCROLL_THRESHOLD) {
-            // Round to nearest integer to ensure consistent scrolling
-            const scrollAmount = Math.round(scrollAccumulator);
-            sendCommand('scroll', { dx: 0, dy: scrollAmount });
-            // Keep remainder for next scroll
-            scrollAccumulator -= scrollAmount;
+        // During gesture detection phase
+        if (!twoFingerGesture.gestureType) {
+            twoFingerGesture.initialPoints.push(center);
+            
+            // Calculate total distance moved
+            const totalDistance = Math.sqrt(
+                Math.pow(center.x - twoFingerGesture.startCenter.x, 2) +
+                Math.pow(center.y - twoFingerGesture.startCenter.y, 2)
+            );
+
+            // If we've moved enough to determine gesture type
+            if (totalDistance >= GESTURE_DETECTION_DISTANCE) {
+                const angle = Math.abs(calculateAngle(
+                    twoFingerGesture.startCenter,
+                    center
+                ));
+                
+                // Determine gesture type based on angle
+                if (angle < ANGLE_THRESHOLD || angle > (180 - ANGLE_THRESHOLD)) {
+                    twoFingerGesture.gestureType = 'navigation';
+                    console.log('Gesture type set to: navigation');
+                } else if (angle > (90 - ANGLE_THRESHOLD) && angle < (90 + ANGLE_THRESHOLD)) {
+                    twoFingerGesture.gestureType = 'scroll';
+                    console.log('Gesture type set to: scroll');
+                }
+            }
+            return; // Don't process any gestures during detection phase
         }
-        
-        // Update navigation logic with inverted option
-        twoFingerGesture.horizontalAccum += dx;
-        if (!twoFingerGesture.navigationTriggered && 
-            Math.abs(twoFingerGesture.horizontalAccum) > navigationDistance) {
-            const isSwipeRight = twoFingerGesture.horizontalAccum > 0;
-            const direction = navigationSwipeInverted ? !isSwipeRight : isSwipeRight;
-            sendCommand('shortcut', { 
-                keys: ['alt', direction ? 'right' : 'left'] 
-            });
-            twoFingerGesture.navigationTriggered = true;
+
+        // Process the gesture based on its type
+        if (twoFingerGesture.gestureType === 'scroll') {
+            // Handle scrolling
+            scrollAccumulator += dy * scrollSpeed;
+            if (Math.abs(scrollAccumulator) >= SCROLL_THRESHOLD) {
+                const scrollAmount = Math.round(scrollAccumulator);
+                sendCommand('scroll', { dx: 0, dy: scrollAmount });
+                scrollAccumulator -= scrollAmount;
+            }
+        } else if (twoFingerGesture.gestureType === 'navigation') {
+            // Handle navigation
+            twoFingerGesture.horizontalAccum += dx;
+            if (!twoFingerGesture.navigationTriggered && 
+                Math.abs(twoFingerGesture.horizontalAccum) > navigationDistance) {
+                const isSwipeRight = twoFingerGesture.horizontalAccum > 0;
+                const direction = navigationSwipeInverted ? !isSwipeRight : isSwipeRight;
+                sendCommand('shortcut', { 
+                    keys: ['alt', direction ? 'right' : 'left'] 
+                });
+                twoFingerGesture.navigationTriggered = true;
+            }
         }
     } else if (activePointers.size === 1 && singlePointerGesture) {
         // Process single-finger move for cursor movement
@@ -271,7 +324,7 @@ function pointerupHandler(e) {
     activePointers.delete(e.pointerId);
     if (activePointers.size < 2) {
         twoFingerGesture = null;
-        scrollAccumulator = 0; // Reset accumulator when two-finger gesture ends
+        scrollAccumulator = 0;
     }
     if (activePointers.size === 0 && singlePointerGesture) {
         // For single-finger gestures that did not move, send left click on pointerup
