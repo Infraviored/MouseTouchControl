@@ -44,11 +44,17 @@ let scrollSpeed = 0.5; // new setting to halve the default scroll speed
 
 // Add new global for scroll accumulation
 let scrollAccumulator = 0;
-const SCROLL_THRESHOLD = 1; // Minimum amount before triggering a scroll
+const SCROLL_THRESHOLD = 1; // Reduced from 3 to 1
 
 // Add new constants for gesture detection
 const GESTURE_DETECTION_DISTANCE = 15; // pixels to determine gesture type
 const ANGLE_THRESHOLD = 45; // degrees to separate horizontal/vertical gestures
+
+// Add new global variable for terminal mode
+let terminalMode = false;
+
+// Replace leftClick button initialization with terminal mode button
+const terminalButton = document.getElementById('terminalMode');
 
 // SETTINGS
 function loadSettings() {
@@ -60,6 +66,7 @@ function loadSettings() {
     navigationSwipeInverted = settings.navigationSwipeInverted || false;
     navigationDistance = settings.navigationDistance || 50;
     scrollSpeed = settings.scrollSpeed || 0.5;
+    terminalMode = settings.terminalMode || false;
     
     mouseSpeedInput.value = mouseSpeed * 10;
     moveThresholdInput.value = moveThreshold;
@@ -71,6 +78,12 @@ function loadSettings() {
     document.getElementById('scrollSpeed').value = scrollSpeed * 100;
     
     document.body.classList.toggle('dark-theme', darkModeToggle.checked);
+    
+    // Apply terminal mode state on load
+    if (terminalMode) {
+        terminalButton.classList.add('active');
+        terminalButton.innerHTML = '<i class="fas fa-terminal active"></i>';
+    }
 }
 
 function saveSettings() {
@@ -82,7 +95,8 @@ function saveSettings() {
         darkMode: darkModeToggle.checked,
         navigationSwipeInverted,
         navigationDistance,
-        scrollSpeed
+        scrollSpeed,
+        terminalMode
     };
     localStorage.setItem('touchpadSettings', JSON.stringify(settings));
 }
@@ -119,7 +133,8 @@ settingsButton.addEventListener('click', () => {
     settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
 });
 
-shortcutsButton.addEventListener('click', () => {
+shortcutsButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent the document click handler from firing
     shortcutsPopup.style.display = 'block';
 });
 
@@ -149,7 +164,6 @@ darkModeToggle.addEventListener('change', (e) => {
 });
 
 // BUTTONS for click and shortcuts (remain unchanged)
-leftClick.addEventListener('click', () => sendCommand('leftClick'));
 rightClick.addEventListener('click', () => sendCommand('rightClick'));
 sendButton.addEventListener('click', sendText);
 copyButton.addEventListener('click', copyText);
@@ -279,8 +293,8 @@ function pointermoveHandler(e) {
 
         // Process the gesture based on its type
         if (twoFingerGesture.gestureType === 'scroll') {
-            // Handle scrolling
-            scrollAccumulator += dy * scrollSpeed;
+            // Scale down the scroll amount for smoother scrolling
+            scrollAccumulator += dy * scrollSpeed * 0.2; // Added 0.2 multiplier for finer control
             if (Math.abs(scrollAccumulator) >= SCROLL_THRESHOLD) {
                 const scrollAmount = Math.round(scrollAccumulator);
                 sendCommand('scroll', { dx: 0, dy: scrollAmount });
@@ -322,11 +336,18 @@ function pointermoveHandler(e) {
 
 function pointerupHandler(e) {
     activePointers.delete(e.pointerId);
-    if (activePointers.size < 2) {
+    if (activePointers.size < 2 && twoFingerGesture) {
+        // If no gesture type was determined (movement was less than detection distance),
+        // treat it as a two-finger tap (right click)
+        if (!twoFingerGesture.gestureType) {
+            sendCommand('rightClick');
+            console.log('Two-finger tap detected: right click');
+        }
         twoFingerGesture = null;
         scrollAccumulator = 0;
-    }
-    if (activePointers.size === 0 && singlePointerGesture) {
+        // Cancel any single-finger gesture to prevent left click
+        singlePointerGesture = null;
+    } else if (activePointers.size === 0 && singlePointerGesture) {
         // For single-finger gestures that did not move, send left click on pointerup
         if (!singlePointerGesture.isMoving) {
             sendCommand('leftClick');
@@ -352,7 +373,18 @@ function sendCommand(command, data = {}) {
 function sendText() {
     const text = textField.value;
     if (text) {
-        sendCommand('typeAll', { text });
+        // First copy the text to clipboard
+        sendCommand('copy', { text });
+        
+        // Then paste using either Ctrl+V or Ctrl+Shift+V depending on terminal mode
+        setTimeout(() => {
+            if (terminalMode) {
+                sendCommand('shortcut', { keys: ['control', 'shift', 'v'] });
+            } else {
+                sendCommand('shortcut', { keys: ['control', 'v'] });
+            }
+        }, 100); // Small delay to ensure copy completes
+        
         textField.value = '';
     }
 }
@@ -454,6 +486,37 @@ document.querySelectorAll('.key-button').forEach(button => {
         button.addEventListener(event, () => {
             button.style.transform = '';
             button.style.background = '';
+            // Trigger click event on touchend to ensure the command is sent
+            button.click();
         });
     });
+});
+
+// Add click outside handler for shortcuts popup
+document.addEventListener('click', (e) => {
+    const shortcutsPopup = document.getElementById('shortcutsPopup');
+    const shortcutsButton = document.getElementById('shortcutsButton');
+    
+    // If click is outside the popup and the button, and popup is visible
+    if (!shortcutsPopup.contains(e.target) && 
+        !shortcutsButton.contains(e.target) && 
+        shortcutsPopup.style.display === 'block') {
+        shortcutsPopup.style.display = 'none';
+    }
+});
+
+// Add terminal mode toggle handler
+terminalButton.addEventListener('click', () => {
+    terminalMode = !terminalMode;
+    
+    // Update visual feedback
+    if (terminalMode) {
+        terminalButton.style.backgroundColor = 'var(--button-color)';
+        terminalButton.style.color = 'var(--button-text)';
+    } else {
+        terminalButton.style.backgroundColor = 'transparent';
+        terminalButton.style.color = 'var(--text-color)';
+    }
+    
+    saveSettings();
 });
