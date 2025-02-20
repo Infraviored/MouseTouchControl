@@ -21,8 +21,6 @@ const reloadButton = document.getElementById('reloadButton');
 
 let mouseSpeed = 4, moveThreshold = 5, rightClickDelay = 500, acceleration = 1.0;
 let isLocked = false;
-let lastClickTime = 0;
-const doubleClickDelay = 300; // milliseconds between clicks to count as double-click
 
 // New globals for multi-touch support
 const activePointers = new Map();
@@ -55,6 +53,10 @@ let terminalMode = false;
 
 // Replace leftClick button initialization with terminal mode button
 const terminalButton = document.getElementById('terminalMode');
+
+// Keep the double-click detection variables
+let lastClickTime = 0;
+const doubleClickDelay = 300; // milliseconds between clicks to count as double-click
 
 // SETTINGS
 function loadSettings() {
@@ -212,33 +214,41 @@ function pointerdownHandler(e) {
             singlePointerGesture.rightClickTimer = null;
         }
     } else if (activePointers.size === 1) {
-        // Start single-finger gesture
-        singlePointerGesture = {
-            startX: e.clientX,
-            startY: e.clientY,
-            lastX: e.clientX,
-            lastY: e.clientY,
-            isMoving: false,
-            rightClickTimer: null
-        };
-        const currentTime = new Date().getTime();
-        if (currentTime - lastClickTime < doubleClickDelay) {
-            // Double-tap detected: initiate drag mode (lock)
-            isLocked = true;
-            lockButton.innerHTML = '<i class="fas fa-lock"></i>';
+        const now = Date.now();
+        if (now - lastClickTime < doubleClickDelay) {
+            // Double-click detected - start temporary lock
             sendCommand('mouseDown');
-            singlePointerGesture.isMoving = true;
-        } else {
-            if (!isLocked) {
-                singlePointerGesture.rightClickTimer = setTimeout(() => {
-                    if (!singlePointerGesture.isMoving) {
+            singlePointerGesture = {
+                startX: e.clientX,
+                startY: e.clientY,
+                lastX: e.clientX,
+                lastY: e.clientY,
+                isMoving: false,
+                isTemporaryLocked: true,
+                rightClickTimer: setTimeout(() => {
+                    if (singlePointerGesture && !singlePointerGesture.isMoving) {
                         sendCommand('rightClick');
+                        singlePointerGesture.rightClickTriggered = true;
                     }
-                    singlePointerGesture.isMoving = true;
-                }, rightClickDelay);
-            }
+                }, rightClickDelay)
+            };
+        } else {
+            // Normal single click
+            singlePointerGesture = {
+                startX: e.clientX,
+                startY: e.clientY,
+                lastX: e.clientX,
+                lastY: e.clientY,
+                isMoving: false,
+                rightClickTimer: setTimeout(() => {
+                    if (singlePointerGesture && !singlePointerGesture.isMoving) {
+                        sendCommand('rightClick');
+                        singlePointerGesture.rightClickTriggered = true;
+                    }
+                }, rightClickDelay)
+            };
         }
-        lastClickTime = currentTime;
+        lastClickTime = now;
     }
 }
 
@@ -323,10 +333,6 @@ function pointermoveHandler(e) {
                                         Math.pow(e.clientY - singlePointerGesture.startY, 2));
         if (totalMovement > moveThreshold) {
             singlePointerGesture.isMoving = true;
-            if (!isLocked && singlePointerGesture.rightClickTimer) {
-                clearTimeout(singlePointerGesture.rightClickTimer);
-                singlePointerGesture.rightClickTimer = null;
-            }
             const acceleratedDx = applyAcceleration(dx);
             const acceleratedDy = applyAcceleration(dy);
             sendCommand('move', { dx: acceleratedDx * mouseSpeed, dy: acceleratedDy * mouseSpeed });
@@ -348,9 +354,14 @@ function pointerupHandler(e) {
         // Cancel any single-finger gesture to prevent left click
         singlePointerGesture = null;
     } else if (activePointers.size === 0 && singlePointerGesture) {
-        // For single-finger gestures that did not move, send left click on pointerup
-        if (!singlePointerGesture.isMoving) {
+        // Release temporary lock if it was active
+        if (singlePointerGesture.isTemporaryLocked) {
+            sendCommand('mouseUp');
+        } else if (!singlePointerGesture.isMoving && !singlePointerGesture.rightClickTriggered) {
             sendCommand('leftClick');
+        }
+        if (singlePointerGesture.rightClickTimer) {
+            clearTimeout(singlePointerGesture.rightClickTimer);
         }
         singlePointerGesture = null;
     }
