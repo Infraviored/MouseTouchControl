@@ -47,42 +47,137 @@
         </div>
         <button id="rightClick" class="icon-button"><i class="fas fa-hand-pointer"></i></button>
     </div>
-    <div id="settingsPanel">
-        <div class="setting">
-            <label for="mouseSpeed">Mouse Speed:</label>
-            <input type="range" id="mouseSpeed" min="1" max="80" value="40">
+    <div id="settingsPanel" class="menu-panel" style="display: none">
+        <!-- Mouse Control Group -->
+        <div class="settings-group">
+            <h3>Mouse Control</h3>
+            
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Mouse Speed</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Adjusts cursor movement sensitivity. Higher values make the cursor move faster."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="mouseSpeedNumber" min="1" max="80" value="40">
+                    <input type="range" id="mouseSpeed" min="1" max="80" value="40">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Move Threshold</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Minimum movement required before cursor starts moving. Helps prevent accidental movements."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="moveThresholdNumber" min="1" max="20" value="5">
+                    <input type="range" id="moveThreshold" min="1" max="20" value="5">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Acceleration</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Adjusts how much faster the cursor moves with quicker finger movements. Higher values increase acceleration."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="accelerationNumber" min="10" max="14" value="10" step="0.1">
+                    <input type="range" id="acceleration" min="10" max="14" value="10" step="0.1">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
         </div>
-        <div class="setting">
-            <label for="moveThreshold">Move Threshold:</label>
-            <input type="range" id="moveThreshold" min="1" max="20" value="5">
+
+        <!-- Click Behavior Group -->
+        <div class="settings-group">
+            <h3>Click Behavior</h3>
+            
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Right Click Delay</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Time in milliseconds to hold for right-click. Lower values make right-clicks trigger faster."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="rightClickDelayNumber" min="200" max="500" value="500" step="50">
+                    <input type="range" id="rightClickDelay" min="200" max="500" value="500" step="50">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Double-Click Delay</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Time window in milliseconds to detect a double-click for drag operations."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="doubleClickDelayNumber" min="100" max="1000" value="300" step="50">
+                    <input type="range" id="doubleClickDelay" min="100" max="1000" value="300" step="50">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
         </div>
-        <div class="setting">
-            <label for="rightClickDelay">Right Click Delay (ms):</label>
-            <input type="number" id="rightClickDelay" min="100" max="2000" value="500">
+
+        <!-- Gesture Settings Group -->
+        <div class="settings-group">
+            <h3>Gesture Settings</h3>
+            
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Navigation Distance</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Distance in pixels required for navigation gestures to trigger."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="navigationDistanceNumber" min="20" max="200" value="50" step="10">
+                    <input type="range" id="navigationDistance" min="20" max="200" value="50" step="10">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Scroll Speed</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Adjusts how fast two-finger scrolling moves the page."></i>
+                </div>
+                <div class="setting-controls">
+                    <input type="number" id="scrollSpeedNumber" min="10" max="200" value="50" step="10">
+                    <input type="range" id="scrollSpeed" min="10" max="200" value="50" step="10">
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Invert Navigation Swipe</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Reverse the direction of navigation gestures."></i>
+                </div>
+                <div class="setting-controls">
+                    <label class="switch">
+                        <input type="checkbox" id="navigationSwipeInverted">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
         </div>
-        <div class="setting">
-            <label for="acceleration">Acceleration:</label>
-            <input type="range" id="acceleration" min="10" max="14" value="10" step="0.1">
-        </div>
-        <div class="setting">
-            <label for="darkMode">Dark Theme:</label>
-            <input type="checkbox" id="darkMode">
-        </div>
-        <div class="setting">
-            <label for="doubleClickDelay">Double-Click Drag Delay (ms):</label>
-            <input type="number" id="doubleClickDelay" min="100" max="1000" step="50" value="300">
-        </div>
-        <div class="setting">
-            <label for="navigationSwipeInverted">Invert Navigation Swipe</label>
-            <input type="checkbox" id="navigationSwipeInverted">
-        </div>
-        <div class="setting">
-            <label for="navigationDistance">Navigation Distance (px)</label>
-            <input type="range" id="navigationDistance" min="20" max="200" step="10">
-        </div>
-        <div class="setting">
-            <label for="scrollSpeed">Scroll Speed</label>
-            <input type="range" id="scrollSpeed" min="10" max="200" step="10">
+
+        <!-- Appearance Group -->
+        <div class="settings-group">
+            <h3>Appearance</h3>
+            
+            <div class="setting">
+                <div class="setting-header">
+                    <label>Dark Theme</label>
+                    <i class="fas fa-info-circle setting-info" data-tooltip="Switch between light and dark color themes."></i>
+                </div>
+                <div class="setting-controls">
+                    <label class="switch">
+                        <input type="checkbox" id="darkMode">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-tooltip"></div>
+            </div>
         </div>
     </div>
     <div id="shortcutsPopup">

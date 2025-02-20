@@ -86,6 +86,14 @@ function loadSettings() {
         terminalButton.classList.add('active');
         terminalButton.innerHTML = '<i class="fas fa-terminal active"></i>';
     }
+
+    // Update toggle states with proper colors
+    if (darkModeToggle.checked) {
+        darkModeToggle.nextElementSibling.style.backgroundColor = 'var(--accent-color)';
+    }
+    if (document.getElementById('navigationSwipeInverted').checked) {
+        document.getElementById('navigationSwipeInverted').nextElementSibling.style.backgroundColor = 'var(--accent-color)';
+    }
 }
 
 function saveSettings() {
@@ -132,12 +140,13 @@ textField.addEventListener('blur', () => {
 });
 
 settingsButton.addEventListener('click', () => {
-    settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+    settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
 });
 
 shortcutsButton.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent the document click handler from firing
-    shortcutsPopup.style.display = 'block';
+    e.stopPropagation();
+    const display = shortcutsPopup.style.display;
+    shortcutsPopup.style.display = display === 'block' ? 'none' : 'block';
 });
 
 document.getElementById('closeShortcuts').addEventListener('click', () => {
@@ -531,3 +540,44 @@ terminalButton.addEventListener('click', () => {
     
     saveSettings();
 });
+
+// Handle tooltips
+document.querySelectorAll('.setting-info').forEach(info => {
+    const tooltip = info.closest('.setting').querySelector('.setting-tooltip');
+    tooltip.textContent = info.dataset.tooltip;
+    
+    info.addEventListener('mouseenter', () => {
+        tooltip.style.display = 'block';
+    });
+    
+    info.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+    });
+});
+
+// Ensure shortcuts popup is closed on page load
+window.addEventListener('load', () => {
+    shortcutsPopup.style.display = 'none';
+});
+
+// Sync number inputs with sliders
+function setupInputSync(sliderId, numberId) {
+    const slider = document.getElementById(sliderId);
+    const number = document.getElementById(numberId);
+    
+    slider.addEventListener('input', () => {
+        number.value = slider.value;
+    });
+    
+    number.addEventListener('input', () => {
+        slider.value = number.value;
+        slider.dispatchEvent(new Event('input'));
+    });
+}
+
+// Setup sync for all numeric settings
+setupInputSync('mouseSpeed', 'mouseSpeedNumber');
+setupInputSync('moveThreshold', 'moveThresholdNumber');
+setupInputSync('acceleration', 'accelerationNumber');
+setupInputSync('navigationDistance', 'navigationDistanceNumber');
+setupInputSync('scrollSpeed', 'scrollSpeedNumber');

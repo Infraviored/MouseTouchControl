@@ -1,8 +1,13 @@
 :root {
     --bg-color: #ffffff;
     --text-color: #333333;
-    --button-color: #4CAF50;
+    --button-color: #2196F3; /* Blue for light theme */
     --button-text: #ffffff;
+    --accent-color: #2196F3;
+    --menu-bg: #ffffff;
+    --menu-border: #e0e0e0;
+    --button-active-bg: rgba(33, 150, 243, 0.1);
+    --info-bg: rgba(33, 150, 243, 0.05);
     --top-bar-height: 50px;
     --bottom-bar-height: 60px;
 }
@@ -10,8 +15,13 @@
 .dark-theme {
     --bg-color: #333333;
     --text-color: #ffffff;
-    --button-color: #4CAF50;
+    --button-color: #FF9800; /* Orange for dark theme */
     --button-text: #ffffff;
+    --accent-color: #FF9800;
+    --menu-bg: #424242;
+    --menu-border: #555555;
+    --button-active-bg: rgba(255, 152, 0, 0.2);
+    --info-bg: rgba(255, 152, 0, 0.1);
 }
 
 html, body {
@@ -101,52 +111,124 @@ button, .icon-button {
 }
 
 #settingsPanel {
-    position: fixed;
-    top: var(--top-bar-height);
-    right: 10px;
-    background-color: var(--bg-color);
-    border: 1px solid var(--text-color);
-    padding: 15px;
-    border-radius: 5px;
-    display: none;
+    top: calc(var(--top-bar-height) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 20;
 }
 
+/* Single setting container */
 .setting {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
-label {
-    display: block;
-    margin-bottom: 5px;
+/* Top row with label and info icon */
+.setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
 }
 
+.setting-header label {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.setting-info {
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+/* Controls row with number input and slider */
+.setting-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Number input styling */
+.setting-controls input[type="number"] {
+    width: 70px;
+    padding: 4px;
+    border: 1px solid var(--menu-border);
+    border-radius: 4px;
+    background: var(--menu-bg);
+    color: var(--text-color);
+}
+
+/* Slider styling */
+.setting-controls input[type="range"] {
+    flex-grow: 1;
+    min-width: 200px;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--menu-border);
+    border-radius: 2px;
+}
+
+.setting-controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: pointer;
+}
+
+/* Tooltip styling */
+.setting-tooltip {
+    display: none;
+    position: absolute;
+    background: var(--menu-bg);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-top: 4px;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: var(--text-color);
+}
+
+/* Make toggle switches smaller */
+.switch {
+    width: 36px;  /* Reduced from 50px */
+    height: 20px; /* Reduced from 24px */
+}
+
+.slider:before {
+    height: 14px;  /* Reduced from 16px */
+    width: 14px;   /* Reduced from 16px */
+    left: 3px;     /* Adjusted for new size */
+    bottom: 3px;   /* Adjusted for new size */
+}
+
+input:checked + .slider:before {
+    transform: translateX(16px); /* Adjusted for new size */
+}
+
+/* Shortcuts popup positioning */
 #shortcutsPopup {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--bg-color);
-    border: 1px solid var(--text-color);
-    padding: 20px;
-    border-radius: 5px;
     display: none;
-    z-index: 30;
-    max-width: 400px;
-    width: 90%;
-}
-
-#shortcutsPopup button {
-    margin: 5px;
-}
-
-.shortcuts-section {
-    margin: 20px 0;
+    z-index: 1000;
+    background-color: var(--menu-bg);
+    border: 1px solid var(--menu-border);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--menu-border),
+                0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 300px;
+    max-width: 90vw;
 }
 
 .shortcuts-section h3 {
+    color: var(--accent-color);
     margin-bottom: 15px;
-    color: var(--text-color);
     font-size: 1.1em;
 }
 
@@ -233,4 +315,30 @@ label {
 
 #terminalMode.active i {
     color: var(--accent-color);
+}
+
+.settings-group {
+    margin-bottom: 15px;
+}
+
+.settings-group h3 {
+    color: var(--accent-color);
+    margin-bottom: 10px;
+    font-size: 1em;
+    border-bottom: 1px solid var(--menu-border);
+    padding-bottom: 3px;
+}
+
+/* Update menu-panel class to be wider and centered */
+.menu-panel {
+    background-color: var(--menu-bg);
+    border: 1px solid var(--menu-border);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--menu-border),
+                0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    width: min(400px, 85vw);  /* Use minimum of 400px or 90% viewport width */
+    max-width: 95vw;
+    position: fixed;
+    margin: 0 auto;  /* Ensure center alignment when width is reduced */
 }
