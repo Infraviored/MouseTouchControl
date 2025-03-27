@@ -2,6 +2,7 @@ const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
 
 const touchpad = document.getElementById('touchpad');
+const scrollContent = document.getElementById('scrollContent');
 const leftClick = document.getElementById('leftClick');
 const rightClick = document.getElementById('rightClick');
 const textField = document.getElementById('textField');
@@ -58,6 +59,14 @@ const terminalButton = document.getElementById('terminalMode');
 let lastClickTime = 0;
 const doubleClickDelay = 300; // milliseconds between clicks to count as double-click
 
+// Add new globals for scrollbar handling
+let isScrollbarGesture = false;
+let SCROLLBAR_WIDTH = 20; // Effective touch area width for scrollbar (px)
+let scrollbarScrollAccumulator = 0; // Add scrollbar-specific accumulator
+
+// Add new global variable for scrollbar width
+let scrollbarWidth = 20; // Default scrollbar width in pixels
+
 // SETTINGS
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('touchpadSettings')) || {};
@@ -69,6 +78,7 @@ function loadSettings() {
     navigationDistance = settings.navigationDistance || 50;
     scrollSpeed = settings.scrollSpeed || 0.5;
     terminalMode = settings.terminalMode || false;
+    scrollbarWidth = settings.scrollbarWidth || 20; // Load scrollbar width
     
     mouseSpeedInput.value = mouseSpeed * 10;
     moveThresholdInput.value = moveThreshold;
@@ -78,6 +88,7 @@ function loadSettings() {
     document.getElementById('navigationSwipeInverted').checked = navigationSwipeInverted;
     document.getElementById('navigationDistance').value = navigationDistance;
     document.getElementById('scrollSpeed').value = scrollSpeed * 100;
+    document.getElementById('scrollbarWidth').value = scrollbarWidth;
     
     document.body.classList.toggle('dark-theme', darkModeToggle.checked);
     
@@ -94,6 +105,9 @@ function loadSettings() {
     if (document.getElementById('navigationSwipeInverted').checked) {
         document.getElementById('navigationSwipeInverted').nextElementSibling.style.backgroundColor = 'var(--accent-color)';
     }
+    
+    // Update the SCROLLBAR_WIDTH constant
+    SCROLLBAR_WIDTH = scrollbarWidth;
 }
 
 function saveSettings() {
@@ -106,7 +120,8 @@ function saveSettings() {
         navigationSwipeInverted,
         navigationDistance,
         scrollSpeed,
-        terminalMode
+        terminalMode,
+        scrollbarWidth
     };
     localStorage.setItem('touchpadSettings', JSON.stringify(settings));
 }
@@ -205,66 +220,128 @@ function calculateAngle(start, end) {
 }
 
 function pointerdownHandler(e) {
-    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Check if touch is on scrollbar area before adding to active pointers
+    const touchpadRect = touchpad.getBoundingClientRect();
+    const isOnScrollbar = (e.clientX >= touchpadRect.right - SCROLLBAR_WIDTH);
     
-    if (activePointers.size === 2) {
-        const center = getCenterOfActivePointers();
-        twoFingerGesture = {
-            startCenter: center,
-            lastCenter: center,
-            horizontalAccum: 0,
-            navigationTriggered: false,
-            gestureType: null,
-            initialPoints: [center]
-        };
-        // Cancel any pending single-finger timers
-        if (singlePointerGesture && singlePointerGesture.rightClickTimer) {
-            clearTimeout(singlePointerGesture.rightClickTimer);
-            singlePointerGesture.rightClickTimer = null;
-        }
-    } else if (activePointers.size === 1) {
-        const now = Date.now();
-        if (now - lastClickTime < doubleClickDelay) {
-            // Double-click detected - start temporary lock
-            sendCommand('mouseDown');
-            singlePointerGesture = {
-                startX: e.clientX,
-                startY: e.clientY,
-                lastX: e.clientX,
-                lastY: e.clientY,
-                isMoving: false,
-                isTemporaryLocked: true,
-                rightClickTimer: setTimeout(() => {
-                    if (singlePointerGesture && !singlePointerGesture.isMoving) {
-                        sendCommand('rightClick');
-                        singlePointerGesture.rightClickTriggered = true;
-                    }
-                }, rightClickDelay)
+    // Add to active pointers with minimal properties to improve performance
+    if (isOnScrollbar) {
+        activePointers.set(e.pointerId, { 
+            x: e.clientX, 
+            y: e.clientY,
+            isScrollbarTouch: true
+        });
+        isScrollbarGesture = true;
+        e.preventDefault(); // Prevent default scrolling
+    } else {
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        
+        if (activePointers.size === 2) {
+            const center = getCenterOfActivePointers();
+            twoFingerGesture = {
+                startCenter: center,
+                lastCenter: center,
+                horizontalAccum: 0,
+                navigationTriggered: false,
+                gestureType: null,
+                initialPoints: [center]
             };
-        } else {
-            // Normal single click
-            singlePointerGesture = {
-                startX: e.clientX,
-                startY: e.clientY,
-                lastX: e.clientX,
-                lastY: e.clientY,
-                isMoving: false,
-                rightClickTimer: setTimeout(() => {
-                    if (singlePointerGesture && !singlePointerGesture.isMoving) {
-                        sendCommand('rightClick');
-                        singlePointerGesture.rightClickTriggered = true;
-                    }
-                }, rightClickDelay)
-            };
+            // Cancel any pending single-finger timers
+            if (singlePointerGesture && singlePointerGesture.rightClickTimer) {
+                clearTimeout(singlePointerGesture.rightClickTimer);
+                singlePointerGesture.rightClickTimer = null;
+            }
+        } else if (activePointers.size === 1) {
+            const now = Date.now();
+            if (now - lastClickTime < doubleClickDelay) {
+                // Double-click detected - start temporary lock
+                sendCommand('mouseDown');
+                singlePointerGesture = {
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    lastX: e.clientX,
+                    lastY: e.clientY,
+                    isMoving: false,
+                    isTemporaryLocked: true,
+                    rightClickTimer: setTimeout(() => {
+                        if (singlePointerGesture && !singlePointerGesture.isMoving) {
+                            sendCommand('rightClick');
+                            singlePointerGesture.rightClickTriggered = true;
+                        }
+                    }, rightClickDelay)
+                };
+            } else {
+                // Normal single click
+                singlePointerGesture = {
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    lastX: e.clientX,
+                    lastY: e.clientY,
+                    isMoving: false,
+                    rightClickTimer: setTimeout(() => {
+                        if (singlePointerGesture && !singlePointerGesture.isMoving) {
+                            sendCommand('rightClick');
+                            singlePointerGesture.rightClickTriggered = true;
+                        }
+                    }, rightClickDelay)
+                };
+            }
+            lastClickTime = now;
         }
-        lastClickTime = now;
     }
 }
 
 function pointermoveHandler(e) {
     if (!activePointers.has(e.pointerId)) return;
-    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
+    const pointer = activePointers.get(e.pointerId);
+    
+    // Fast path for scrollbar gestures
+    if (pointer.isScrollbarTouch) {
+        const prevY = pointer.y;
+        pointer.y = e.clientY;
+        
+        // Calculate delta y and use the same scrolling logic as two-finger scrolling
+        const dy = pointer.y - prevY;
+        scrollbarScrollAccumulator += dy * scrollSpeed * 0.2;
+        if (Math.abs(scrollbarScrollAccumulator) >= SCROLL_THRESHOLD) {
+            const scrollAmount = Math.round(scrollbarScrollAccumulator);
+            sendCommand('scroll', { dx: 0, dy: scrollAmount });
+            scrollbarScrollAccumulator -= scrollAmount;
+        }
+        return;
+    }
+    
+    // Fast path for single pointer gesture (cursor movement)
+    if (activePointers.size === 1 && singlePointerGesture) {
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+        
+        const dx = pointer.x - singlePointerGesture.lastX;
+        const dy = pointer.y - singlePointerGesture.lastY;
+        singlePointerGesture.lastX = pointer.x;
+        singlePointerGesture.lastY = pointer.y;
+        
+        const totalMovement = Math.sqrt(
+            Math.pow(pointer.x - singlePointerGesture.startX, 2) +
+            Math.pow(pointer.y - singlePointerGesture.startY, 2)
+        );
+        
+        if (totalMovement > moveThreshold) {
+            singlePointerGesture.isMoving = true;
+            const acceleratedDx = applyAcceleration(dx);
+            const acceleratedDy = applyAcceleration(dy);
+            sendCommand('move', { dx: acceleratedDx * mouseSpeed, dy: acceleratedDy * mouseSpeed });
+        }
+        return;
+    }
+    
+    // Update pointer position for multi-touch gestures
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+    activePointers.set(e.pointerId, pointer);
+    
+    // Handle two-finger gestures
     if (activePointers.size === 2) {
         const center = getCenterOfActivePointers();
         if (!twoFingerGesture) {
@@ -301,10 +378,8 @@ function pointermoveHandler(e) {
                 // Determine gesture type based on angle
                 if (angle < ANGLE_THRESHOLD || angle > (180 - ANGLE_THRESHOLD)) {
                     twoFingerGesture.gestureType = 'navigation';
-                    console.log('Gesture type set to: navigation');
                 } else if (angle > (90 - ANGLE_THRESHOLD) && angle < (90 + ANGLE_THRESHOLD)) {
                     twoFingerGesture.gestureType = 'scroll';
-                    console.log('Gesture type set to: scroll');
                 }
             }
             return; // Don't process any gestures during detection phase
@@ -313,7 +388,7 @@ function pointermoveHandler(e) {
         // Process the gesture based on its type
         if (twoFingerGesture.gestureType === 'scroll') {
             // Scale down the scroll amount for smoother scrolling
-            scrollAccumulator += dy * scrollSpeed * 0.2; // Added 0.2 multiplier for finer control
+            scrollAccumulator += dy * scrollSpeed * 0.2;
             if (Math.abs(scrollAccumulator) >= SCROLL_THRESHOLD) {
                 const scrollAmount = Math.round(scrollAccumulator);
                 sendCommand('scroll', { dx: 0, dy: scrollAmount });
@@ -332,37 +407,24 @@ function pointermoveHandler(e) {
                 twoFingerGesture.navigationTriggered = true;
             }
         }
-    } else if (activePointers.size === 1 && singlePointerGesture) {
-        // Process single-finger move for cursor movement
-        const dx = e.clientX - singlePointerGesture.lastX;
-        const dy = e.clientY - singlePointerGesture.lastY;
-        singlePointerGesture.lastX = e.clientX;
-        singlePointerGesture.lastY = e.clientY;
-        const totalMovement = Math.sqrt(Math.pow(e.clientX - singlePointerGesture.startX, 2) +
-                                        Math.pow(e.clientY - singlePointerGesture.startY, 2));
-        if (totalMovement > moveThreshold) {
-            singlePointerGesture.isMoving = true;
-            const acceleratedDx = applyAcceleration(dx);
-            const acceleratedDy = applyAcceleration(dy);
-            sendCommand('move', { dx: acceleratedDx * mouseSpeed, dy: acceleratedDy * mouseSpeed });
-        }
     }
 }
 
 function pointerupHandler(e) {
+    if (!activePointers.has(e.pointerId)) return;
+    
+    const wasScrollbarTouch = activePointers.get(e.pointerId).isScrollbarTouch;
     activePointers.delete(e.pointerId);
-    if (activePointers.size < 2 && twoFingerGesture) {
-        // If no gesture type was determined (movement was less than detection distance),
-        // treat it as a two-finger tap (right click)
-        if (!twoFingerGesture.gestureType) {
-            sendCommand('rightClick');
-            console.log('Two-finger tap detected: right click');
-        }
-        twoFingerGesture = null;
-        scrollAccumulator = 0;
-        // Cancel any single-finger gesture to prevent left click
-        singlePointerGesture = null;
-    } else if (activePointers.size === 0 && singlePointerGesture) {
+    
+    // Fast path for scrollbar gestures
+    if (wasScrollbarTouch && activePointers.size === 0) {
+        isScrollbarGesture = false;
+        scrollbarScrollAccumulator = 0;
+        return;
+    }
+    
+    // Fast path for single pointer gestures
+    if (activePointers.size === 0 && singlePointerGesture) {
         // Release temporary lock if it was active
         if (singlePointerGesture.isTemporaryLocked) {
             sendCommand('mouseUp');
@@ -372,6 +434,19 @@ function pointerupHandler(e) {
         if (singlePointerGesture.rightClickTimer) {
             clearTimeout(singlePointerGesture.rightClickTimer);
         }
+        singlePointerGesture = null;
+        return;
+    }
+    
+    // Handle two-finger gesture ending
+    if (activePointers.size < 2 && twoFingerGesture) {
+        // If no gesture type was determined (movement was less than detection distance),
+        // treat it as a two-finger tap (right click)
+        if (!twoFingerGesture.gestureType) {
+            sendCommand('rightClick');
+        }
+        twoFingerGesture = null;
+        scrollAccumulator = 0;
         singlePointerGesture = null;
     }
 }
@@ -581,3 +656,23 @@ setupInputSync('moveThreshold', 'moveThresholdNumber');
 setupInputSync('acceleration', 'accelerationNumber');
 setupInputSync('navigationDistance', 'navigationDistanceNumber');
 setupInputSync('scrollSpeed', 'scrollSpeedNumber');
+
+// Add event listener for scrollbar width setting
+document.getElementById('scrollbarWidth').addEventListener('input', (e) => {
+    scrollbarWidth = parseInt(e.target.value);
+    SCROLLBAR_WIDTH = scrollbarWidth;
+    saveSettings();
+});
+
+// Setup input sync for scrollbar width
+setupInputSync('scrollbarWidth', 'scrollbarWidthNumber');
+
+// Function to adjust scroll content height
+function adjustScrollContentHeight() {
+    // Make scroll content at least 3x the viewport height to ensure scrolling is possible
+    const viewportHeight = window.innerHeight;
+    scrollContent.style.height = `${viewportHeight * 3}px`;
+}
+
+window.addEventListener('load', adjustScrollContentHeight);
+window.addEventListener('resize', adjustScrollContentHeight);
