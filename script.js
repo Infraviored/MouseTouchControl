@@ -1,5 +1,59 @@
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+let ws;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 10;
+const baseReconnectDelay = 1000; // 1 second initial delay
+let reconnectTimeout;
+let heartbeatInterval;
+
+function connectWebSocket() {
+    ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+    
+    ws.onopen = () => {
+        console.log('Connected to server');
+        reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+        loadSettings();
+        startHeartbeat();
+    };
+    
+    ws.onclose = () => {
+        console.log('Disconnected from server');
+        stopHeartbeat();
+        
+        // Attempt to reconnect with exponential backoff
+        if (reconnectAttempts < maxReconnectAttempts) {
+            const delay = Math.min(30000, baseReconnectDelay * Math.pow(1.5, reconnectAttempts));
+            reconnectAttempts++;
+            reconnectTimeout = setTimeout(connectWebSocket, delay);
+        }
+    };
+    
+    ws.onerror = (error) => {
+        console.error('WebSocket Error:', error);
+    };
+}
+
+// Initialize the WebSocket connection
+connectWebSocket();
+
+// Add event listener for visibility change (when user returns to the tab/app)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        // If the document becomes visible and WebSocket is closed, reconnect
+        if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            clearTimeout(reconnectTimeout); // Clear any pending reconnect
+            reconnectTimeout = setTimeout(connectWebSocket, 500); // Try to reconnect quickly
+        }
+    }
+});
+
+// Add event listener for online/offline events
+window.addEventListener('online', () => {
+    if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectWebSocket, 1000);
+    }
+});
 
 const touchpad = document.getElementById('touchpad');
 const scrollContent = document.getElementById('scrollContent');
@@ -462,7 +516,14 @@ touchpad.addEventListener('pointerleave', pointerupHandler);
 // --- END MULTI-TOUCH HANDLERS ---
 
 function sendCommand(command, data = {}) {
-    ws.send(JSON.stringify({ command, ...data }));
+    // Only send if the connection is open
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ command, ...data }));
+    } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        // If connection is closed, try to reconnect immediately
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectWebSocket, 100);
+    }
 }
 
 function sendText() {
@@ -499,9 +560,14 @@ function toggleLock() {
 }
 
 function startHeartbeat() {
+    stopHeartbeat(); // Clear any existing heartbeat first
     heartbeatInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ command: 'heartbeat' }));
+        } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            // If connection is closed during heartbeat, try to reconnect
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = setTimeout(connectWebSocket, 100);
         }
     }, 30000);
 }
@@ -509,19 +575,6 @@ function startHeartbeat() {
 function stopHeartbeat() {
     clearInterval(heartbeatInterval);
 }
-
-ws.onopen = () => {
-    console.log('Connected to server');
-    loadSettings();
-    startHeartbeat();
-};
-
-ws.onclose = () => {
-    console.log('Disconnected from server');
-    stopHeartbeat();
-};
-
-ws.onerror = (error) => console.error('WebSocket Error:', error);
 
 textField.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -538,7 +591,17 @@ textField.addEventListener('keydown', (e) => {
 });
 
 reloadButton.addEventListener('click', () => {
-    location.reload();
+    // Close existing connection if open
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+    }
+    
+    // Clear any pending reconnect timeouts
+    clearTimeout(reconnectTimeout);
+    
+    // Reset reconnect attempts and connect immediately
+    reconnectAttempts = 0;
+    connectWebSocket();
 });
 
 // Add new event listeners for the new settings

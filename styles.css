@@ -140,6 +140,7 @@ button, .icon-button {
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
+    max-height: calc(80vh - var(--top-bar-height) - 20px); /* Consistent with menu-panel max-height */
 }
 
 /* Single setting container */
@@ -211,9 +212,10 @@ button, .icon-button {
     border-radius: 4px;
     padding: 6px 10px;
     margin-top: 4px;
-    z-index: 100;
+    z-index: 1000; /* Increased z-index to ensure tooltip appears above scrollable content */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     color: var(--text-color);
+    max-width: 250px; /* Limit tooltip width */
 }
 
 /* Make toggle switches smaller */
@@ -343,7 +345,12 @@ input:checked + .slider:before {
 }
 
 .settings-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 5px;
+}
+
+.settings-group:last-child {
+    margin-bottom: 10px; /* Add space after the last group */
 }
 
 .settings-group h3 {
@@ -364,6 +371,27 @@ input:checked + .slider:before {
     padding: 15px;
     width: min(400px, 85vw);  /* Use minimum of 400px or 90% viewport width */
     max-width: 95vw;
+    max-height: 80vh;  /* Limit height to 80% of viewport height */
+    overflow-y: auto;  /* Enable vertical scrolling when content exceeds max-height */
     position: fixed;
     margin: 0 auto;  /* Ensure center alignment when width is reduced */
+}
+
+/* Style the scrollbar for the settings panel */
+.menu-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.menu-panel::-webkit-scrollbar-track {
+    background: rgba(var(--text-color-rgb), 0.05);
+    border-radius: 4px;
+}
+
+.menu-panel::-webkit-scrollbar-thumb {
+    background: rgba(var(--text-color-rgb), 0.2);
+    border-radius: 4px;
+}
+
+.menu-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--text-color-rgb), 0.3);
 }
