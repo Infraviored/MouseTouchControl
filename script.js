@@ -739,3 +739,245 @@ function adjustScrollContentHeight() {
 
 window.addEventListener('load', adjustScrollContentHeight);
 window.addEventListener('resize', adjustScrollContentHeight);
+// Mobile Keyboard Shortcut Bar
+const keyboardShortcutBar = document.getElementById('keyboardShortcutBar');
+const bottomBar = document.getElementById('bottomBar');
+const shortcutKeys = document.querySelectorAll('.shortcut-key');
+const kbShortcutsButton = document.getElementById('kbShortcutsButton');
+
+// Active modifiers state
+const activeModifiers = {
+    control: false,
+    alt: false
+};
+
+// Track the last input value to detect changes
+let lastInputValue = '';
+let isInteractingWithShortcutBar = false;
+
+// Initialize keyboard shortcut bar
+function initKeyboardShortcutBar() {
+    // Toggle keyboard shortcuts with the button
+    kbShortcutsButton.addEventListener('click', () => {
+        if (kbShortcutsButton.classList.contains('active')) {
+            // Currently active, so hide it
+            keyboardShortcutBar.style.display = 'none';
+            kbShortcutsButton.classList.remove('active');
+        } else {
+            // Currently hidden, so show it
+            keyboardShortcutBar.style.display = 'flex';
+            kbShortcutsButton.classList.add('active');
+        }
+    });
+
+    // Set up shortcut key event handlers
+    shortcutKeys.forEach(key => {
+        key.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleShortcutKeyPress(key);
+        });
+        
+        key.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            handleShortcutKeyPress(key);
+        });
+    });
+
+    // Use input event to catch all text changes
+    textField.addEventListener('input', handleTextFieldInput);
+    
+    // Handle key events in text field
+    textField.addEventListener('keydown', handleTextFieldKeyDown);
+}
+
+// Handle shortcut key press
+function handleShortcutKeyPress(key) {
+    const keyType = key.dataset.key;
+    
+    isInteractingWithShortcutBar = true;
+    setTimeout(() => {
+        isInteractingWithShortcutBar = false;
+    }, 1000);
+
+    // Handle special keys with direct action
+    if (['up', 'down', 'left', 'right'].includes(keyType)) {
+        sendCommand('shortcut', { keys: [keyType] });
+        return;
+    }
+
+    // Handle modifier keys
+    if (['control', 'alt'].includes(keyType)) {
+        // Toggle modifier state
+        activeModifiers[keyType] = !activeModifiers[keyType];
+        
+        // Update UI
+        if (activeModifiers[keyType]) {
+            key.classList.add('active');
+            textField.classList.add('shortcut-active');
+        } else {
+            key.classList.remove('active');
+            if (!Object.values(activeModifiers).some(value => value)) {
+                textField.classList.remove('shortcut-active');
+            }
+        }
+        
+        // Save the current text field value
+        lastInputValue = textField.value;
+    }
+}
+
+// Handle input events in text field to catch all changes
+function handleTextFieldInput(e) {
+    const hasActiveModifiers = Object.values(activeModifiers).some(value => value);
+    
+    if (hasActiveModifiers) {
+        const newValue = e.target.value;
+        let addedChar = '';
+        
+        if (newValue.length > lastInputValue.length) {
+            addedChar = newValue.slice(lastInputValue.length);
+        }
+        
+        // Restore the previous value to prevent text entry
+        e.target.value = lastInputValue;
+        
+        if (addedChar) {
+            // Build the shortcut keys
+            const keys = [];
+            if (activeModifiers.control) keys.push('control');
+            if (activeModifiers.alt) keys.push('alt');
+            keys.push(addedChar.toLowerCase());
+            
+            // Send the shortcut command
+            sendCommand('shortcut', { keys });
+            
+            // Reset modifiers after use
+            setTimeout(resetModifiers, 500);
+        }
+    } else {
+        // Update the last input value if no modifiers are active
+        lastInputValue = e.target.value;
+    }
+}
+
+// Handle key press in text field when modifiers are active
+function handleTextFieldKeyDown(e) {
+    const hasActiveModifiers = Object.values(activeModifiers).some(value => value);
+    
+    if (hasActiveModifiers) {
+        // Handle non-printing keys like Enter, Backspace, etc.
+        if (e.key.length > 1 && !['Unidentified'].includes(e.key)) {
+            e.preventDefault();
+            
+            // Build array of keys for the shortcut
+            const keys = [];
+            if (activeModifiers.control) keys.push('control');
+            if (activeModifiers.alt) keys.push('alt');
+            
+            // Map common non-printing keys
+            const keyMap = {
+                'ArrowUp': 'up',
+                'ArrowDown': 'down',
+                'ArrowLeft': 'left',
+                'ArrowRight': 'right',
+                'Enter': 'enter',
+                'Backspace': 'backspace',
+                'Tab': 'tab',
+                'Escape': 'escape'
+            };
+            
+            keys.push(keyMap[e.key] || e.key.toLowerCase());
+            
+            // Send shortcut command
+            sendCommand('shortcut', { keys });
+            
+            // Reset all modifiers after use
+            setTimeout(resetModifiers, 500);
+        } else {
+            // For regular keys and Unidentified, let the input event handle it
+            e.preventDefault();
+        }
+        
+        return false;
+    }
+    
+    return true;
+}
+
+// Reset all active modifiers
+function resetModifiers() {
+    shortcutKeys.forEach(key => {
+        const keyType = key.dataset.key;
+        if (['control', 'alt'].includes(keyType)) {
+            activeModifiers[keyType] = false;
+            key.classList.remove('active');
+        }
+    });
+    textField.classList.remove('shortcut-active');
+}
+
+// Adjust position on keyboard visibility changes
+window.visualViewport?.addEventListener('resize', () => {
+    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+    
+    // Always move both bars when the keyboard is visible
+    bottomBar.style.transform = keyboardHeight > 50 ? `translateY(-${keyboardHeight}px)` : 'translateY(0)';
+    keyboardShortcutBar.style.transform = bottomBar.style.transform;
+    
+    // Update the button state if the keyboard appears or disappears
+    if (keyboardHeight > 50) {
+        // Show keyboard shortcuts bar when keyboard is visible
+        if (keyboardShortcutBar.style.display !== 'flex') {
+            keyboardShortcutBar.style.display = 'flex';
+            kbShortcutsButton.classList.add('active');
+        }
+    } else {
+        // Hide keyboard shortcuts bar when keyboard is hidden
+        if (keyboardShortcutBar.style.display !== 'none') {
+            keyboardShortcutBar.style.display = 'none';
+            kbShortcutsButton.classList.remove('active');
+        }
+    }
+});
+
+// Initialize keyboard shortcut bar when the page loads
+window.addEventListener('load', initKeyboardShortcutBar);
+
+// Add Android-specific focus handler
+textField.addEventListener('focus', () => {
+    // Force show keyboard shortcut bar when text field is focused
+    setTimeout(() => {
+        // Check for keyboard height and update positions
+        const keyboardHeight = window.innerHeight - window.visualViewport.height;
+        if (keyboardHeight > 50) {
+            bottomBar.style.transform = `translateY(-${keyboardHeight}px)`;
+            keyboardShortcutBar.style.transform = bottomBar.style.transform;
+            
+            // Show the keyboard shortcuts bar
+            keyboardShortcutBar.style.display = 'flex';
+            kbShortcutsButton.classList.add('active');
+        }
+    }, 300); // Delay needed for Android keyboard to appear
+});
+
+// Add handler for orientation change
+window.addEventListener('orientationchange', () => {
+    // After orientation change, check the keyboard state
+    setTimeout(() => {
+        const keyboardHeight = window.innerHeight - window.visualViewport.height;
+        
+        if (keyboardHeight > 50) {
+            // Keyboard is visible after orientation change
+            bottomBar.style.transform = `translateY(-${keyboardHeight}px)`;
+            keyboardShortcutBar.style.transform = bottomBar.style.transform;
+            keyboardShortcutBar.style.display = 'flex';
+            kbShortcutsButton.classList.add('active');
+        } else {
+            // Keyboard is hidden after orientation change
+            bottomBar.style.transform = 'translateY(0)';
+            keyboardShortcutBar.style.transform = 'translateY(0)';
+            keyboardShortcutBar.style.display = 'none';
+            kbShortcutsButton.classList.remove('active');
+        }
+    }, 500); // Longer delay for orientation change
+});
